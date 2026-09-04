@@ -25,10 +25,10 @@ namespace MeltPoolDG
   template <int dim, typename number, typename ObstacleType>
   void
   SphericalParticleContactForce<dim, number, ObstacleType>::attach_wall(
-    std::unique_ptr<dealii::Function<dim>> &&wall_signed_distance_function)
+    std::unique_ptr<dealii::Function<dim>> &&wall_distance_function)
   {
-    static int next_wall_id                        = 0;
-    wall_signed_distance_functions[next_wall_id++] = std::move(wall_signed_distance_function);
+    static int next_wall_id                 = 0;
+    wall_distance_functions[next_wall_id++] = std::move(wall_distance_function);
   }
 
 
@@ -89,7 +89,7 @@ namespace MeltPoolDG
               }
           }
 
-        for (auto &[key, wall_function] : wall_signed_distance_functions)
+        for (auto &[key, wall_function] : wall_distance_functions)
           {
             ContactConfiguration particle_wall_contact_configuration(
               particle,
