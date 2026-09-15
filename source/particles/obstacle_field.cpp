@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numbers>
 #include <vector>
 
@@ -236,7 +237,7 @@ number
 MeltPoolDG::ObstacleField<dim, number, ObstacleType>::compute_rayleigh_time_step() const
 {
   number local_radius_sum  = 0.;
-  number local_min_density = 0.;
+  number local_min_density = std::numeric_limits<number>::max();
 
   for (const auto &particle : locally_owned_particle_range())
     {
