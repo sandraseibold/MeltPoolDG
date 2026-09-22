@@ -80,8 +80,8 @@ TEST_F(DistanceFunctionTest2D, Value_BeyondFiniteExtent)
 
 /**
  * Test the gradient() method of DistanceFunction in 2D for a point in front of the wall. The
- * expected gradient is a unit vector pointing from the point towards the wall, which should be in
- * the direction of the negative x-axis.
+ * expected gradient is a unit vector pointing from the wall to the point, which should be in the
+ * direction of the negative x-axis.
  */
 TEST_F(DistanceFunctionTest2D, Gradient_InFrontOfWall)
 {
@@ -94,8 +94,8 @@ TEST_F(DistanceFunctionTest2D, Gradient_InFrontOfWall)
 
 /**
  * Test the gradient() method of DistanceFunction in 2D for a point behind of the wall. The expected
- * gradient is a unit vector pointing from the point towards the wall, which should be in the
- * direction of the positive x-axis.
+ * gradient is a unit vector pointing from the wall to the point, which should be in the direction
+ * of the positive x-axis.
  */
 TEST_F(DistanceFunctionTest2D, Gradient_BehindWall)
 {
@@ -108,8 +108,8 @@ TEST_F(DistanceFunctionTest2D, Gradient_BehindWall)
 
 /**
  * Test the gradient() method of DistanceFunction in 2D for a point beyond the finite extent of the
- * wall. The expected gradient is a unit vector pointing from the point towards the closest point on
- * the wall.
+ * wall. The expected gradient is a unit vector pointing from the closest point on the wall to the
+ * point.
  */
 TEST_F(DistanceFunctionTest2D, Gradient_BeyondFiniteExtent)
 {
@@ -236,7 +236,7 @@ TEST_F(DistanceFunctionTest3D, Value_BeyondBothExtents)
 {
   dealii::Point<3> point_beyond(1., 2., 2.5);
 
-  EXPECT_NEAR(wall.value(point_beyond), std::sqrt(3.0), tolerance);
+  EXPECT_NEAR(wall.value(point_beyond), std::numbers::sqrt3, tolerance);
 }
 
 /**
@@ -265,8 +265,8 @@ TEST_F(DistanceFunctionTest3D, Value_InPlaneButOutside)
 
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point in front of the wall. The
- * expected gradient is a unit vector pointing from the point towards the wall, which should be in
- * the direction of the negative x-axis.
+ * expected gradient is a unit vector pointing from the wall to the point, which should be in the
+ * direction of the negative x-axis.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_DirectlyInFront)
 {
@@ -280,8 +280,8 @@ TEST_F(DistanceFunctionTest3D, Gradient_DirectlyInFront)
 
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point behind of the wall. The expected
- * gradient is a unit vector pointing from the point towards the wall, which should be in the
- * direction of the positive x-axis.
+ * gradient is a unit vector pointing from the wall to the point, which should be in the direction
+ * of the positive x-axis.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_DirectlyBehind)
 {
@@ -296,7 +296,7 @@ TEST_F(DistanceFunctionTest3D, Gradient_DirectlyBehind)
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point beyond the finite extent of the
  * wall along the first tangential direction only. The expected gradient is a unit vector pointing
- * from the point towards the closest point on the wall.
+ * from the closest point on the wall to the point.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_BeyondFirstExtent)
 {
@@ -312,7 +312,7 @@ TEST_F(DistanceFunctionTest3D, Gradient_BeyondFirstExtent)
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point beyond the finite extent of the
  * wall along the second tangential direction only. The expected gradient is a unit vector pointing
- * from the point towards the closest point on the wall.
+ * from the closest point on the wall to the point.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_BeyondSecondExtent)
 {
@@ -328,7 +328,7 @@ TEST_F(DistanceFunctionTest3D, Gradient_BeyondSecondExtent)
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point beyond the finite extent of the
  * wall along both tangential directions. The expected gradient is a unit vector pointing from the
- * point towards the closest point on the wall.
+ * closest point on the wall to the point.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_BeyondBothExtents)
 {
@@ -344,7 +344,7 @@ TEST_F(DistanceFunctionTest3D, Gradient_BeyondBothExtents)
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point directly above the edge of the
  * wall along the first tangential direction, i.e., exactly at the boundary of the finite extent.
- * The expected gradient is a unit vector pointing from the point towards the wall.
+ * The expected gradient is a unit vector pointing from the wall to the point.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_DirectlyAboveEdge)
 {
@@ -359,7 +359,7 @@ TEST_F(DistanceFunctionTest3D, Gradient_DirectlyAboveEdge)
 /**
  * Test the gradient() method of DistanceFunction in 3D for a point that lies in the wall plane but
  * outside the finite extent of the wall. The expected gradient is a unit vector pointing from the
- * point towards the closest point on the wall along the tangential direction.
+ * closest point on the wall to the point along the tangential direction.
  */
 TEST_F(DistanceFunctionTest3D, Gradient_InPlaneButOutside)
 {
