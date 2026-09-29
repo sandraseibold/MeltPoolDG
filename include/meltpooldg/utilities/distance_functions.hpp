@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <memory>
+#include <utility>
 
 
 /**
@@ -313,5 +315,62 @@ namespace MeltPoolDG::Functions::Distance
     /// Tolerance for the geometric consistency checks and for detecting points on the surface or
     /// on the axis.
     const number tolerance = 1e-12;
+  };
+
+  /**
+   * Wraps a distance function of a wall at rest and translates it by a time-dependent
+   * displacement u(t). The distance to the moving wall is d(x, t) = d_rest(x - u(t)).
+   */
+  template <int dim, typename number>
+  class TranslatingWall final : public dealii::Function<dim, number>
+  {
+  public:
+    /**
+     * @param wall_at_rest  Distance function of the wall at its initial position.
+     * @param displacement  Vector-valued (dim components), time-dependent displacement u(t).
+     *                      Only the time dependency is used; the spatial argument is ignored.
+     * @param initial_time  Initial time.
+     */
+    TranslatingWall(std::unique_ptr<dealii::Function<dim, number>> &&wall_at_rest,
+                    std::unique_ptr<dealii::Function<dim, number>> &&displacement,
+                    const number                                     initial_time = 0.)
+      : dealii::Function<dim, number>(1, initial_time)
+      , wall_at_rest(std::move(wall_at_rest))
+      , displacement(std::move(displacement))
+    {
+      AssertDimension(this->displacement->n_components, dim);
+      set_time(initial_time);
+    }
+
+    void
+    set_time(const number new_time) override
+    {
+      dealii::Function<dim, number>::set_time(new_time);
+      wall_at_rest->set_time(new_time);
+      displacement->set_time(new_time);
+
+      // The displacement only depends on time; evaluate it once here instead of in every
+      // value()/gradient() call.
+      const dealii::Point<dim, number> origin;
+      for (unsigned int d = 0; d < dim; ++d)
+        current_displacement[d] = displacement->value(origin, d);
+    }
+
+    number
+    value(const dealii::Point<dim, number> &x, const unsigned int component = 0) const override
+    {
+      return wall_at_rest->value(x - current_displacement, component);
+    }
+
+    dealii::Tensor<1, dim, number>
+    gradient(const dealii::Point<dim, number> &x, const unsigned int component = 0) const override
+    {
+      return wall_at_rest->gradient(x - current_displacement, component);
+    }
+
+  private:
+    std::unique_ptr<dealii::Function<dim, number>> wall_at_rest;
+    std::unique_ptr<dealii::Function<dim, number>> displacement;
+    dealii::Tensor<1, dim, number>                 current_displacement;
   };
 } // namespace MeltPoolDG::Functions::Distance
