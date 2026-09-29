@@ -329,39 +329,65 @@ namespace MeltPoolDG::Functions::Distance
      * @param wall_at_rest  Distance function of the wall at its initial position.
      * @param displacement  Vector-valued (dim components), time-dependent displacement u(t).
      *                      Only the time dependency is used; the spatial argument is ignored.
+     * @param velocity_time_step Time step used for the finite difference approximation of the
+     *                           wall velocity; choose it in the order of the simulation time step.
      * @param initial_time  Initial time.
      */
     TranslatingWall(std::unique_ptr<dealii::Function<dim, number>> &&wall_at_rest,
                     std::unique_ptr<dealii::Function<dim, number>> &&displacement,
+                    const number                                     velocity_time_step,
                     const number                                     initial_time = 0.)
       : dealii::Function<dim, number>(1, initial_time)
       , wall_at_rest(std::move(wall_at_rest))
       , displacement(std::move(displacement))
+      , velocity_time_step(velocity_time_step)
     {
       AssertDimension(this->displacement->n_components, dim);
+      Assert(velocity_time_step > 0., dealii::ExcMessage("velocity_time_step must be positive."));
       set_time(initial_time);
     }
 
+    /**
+     * Set the time and update the current displacement and velocity of the wall.
+     */
     void
     set_time(const number new_time) override
     {
       dealii::Function<dim, number>::set_time(new_time);
       wall_at_rest->set_time(new_time);
-      displacement->set_time(new_time);
 
-      // The displacement only depends on time; evaluate it once here instead of in every
-      // value()/gradient() call.
-      const dealii::Point<dim, number> origin;
-      for (unsigned int d = 0; d < dim; ++d)
-        current_displacement[d] = displacement->value(origin, d);
+      current_displacement = evaluate_displacement(new_time);
+
+      // The displacement function provides no time derivative, hence approximate the wall velocity
+      // by a central difference quotient.
+      current_velocity = (evaluate_displacement(new_time + velocity_time_step) -
+                          evaluate_displacement(new_time - velocity_time_step)) /
+                         (2. * velocity_time_step);
+
+      displacement->set_time(new_time);
     }
 
+    /**
+     * Return the translational velocity of the wall at the current time.
+     */
+    const dealii::Tensor<1, dim, number> &
+    get_velocity() const
+    {
+      return current_velocity;
+    }
+
+    /**
+     * Return the distance of @p x to the displaced wall.
+     */
     number
     value(const dealii::Point<dim, number> &x, const unsigned int component = 0) const override
     {
       return wall_at_rest->value(x - current_displacement, component);
     }
 
+    /**
+     * Return the gradient of the distance function of the displaced wall at @p x.
+     */
     dealii::Tensor<1, dim, number>
     gradient(const dealii::Point<dim, number> &x, const unsigned int component = 0) const override
     {
@@ -369,8 +395,24 @@ namespace MeltPoolDG::Functions::Distance
     }
 
   private:
+    /**
+     * Evaluate the displacement u(t) of the wall at the given @p time.
+     */
+    dealii::Tensor<1, dim, number>
+    evaluate_displacement(const number time)
+    {
+      displacement->set_time(time);
+
+      const dealii::Point<dim, number> origin;
+      dealii::Tensor<1, dim, number>   u;
+      for (unsigned int d = 0; d < dim; ++d)
+        u[d] = displacement->value(origin, d);
+      return u;
+    }
     std::unique_ptr<dealii::Function<dim, number>> wall_at_rest;
     std::unique_ptr<dealii::Function<dim, number>> displacement;
     dealii::Tensor<1, dim, number>                 current_displacement;
+    dealii::Tensor<1, dim, number>                 current_velocity;
+    number                                         velocity_time_step;
   };
 } // namespace MeltPoolDG::Functions::Distance

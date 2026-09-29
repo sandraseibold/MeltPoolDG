@@ -7,6 +7,7 @@
 #include <meltpooldg/particles/obstacle_field.hpp>
 #include <meltpooldg/particles/particle_accessor.hpp>
 #include <meltpooldg/utilities/dealii_tensor.hpp>
+#include <meltpooldg/utilities/distance_functions.hpp>
 
 #include <cmath>
 #include <numbers>
@@ -56,6 +57,12 @@ namespace MeltPoolDG
 
       particle.add_torque(tangential_torque + rolling_torque);
     };
+
+    // Walls may be time-dependent
+    const number wall_time =
+      time_iterator.get_current_time() - time_iterator.get_current_time_increment();
+    for (const auto &[key, wall_function] : wall_distance_functions)
+      wall_function->set_time(wall_time);
 
 
     for (auto &particle : obstacle_field.locally_owned_particle_range())
@@ -321,20 +328,27 @@ namespace MeltPoolDG
 
     relative_angular_velocity = -particle.get_angular_velocity();
 
+    // Moving walls (TranslatingWall) contribute their translational velocity to the relative
+    // velocity at the contact point.
+    dealii::Tensor<1, dim, number> wall_velocity;
+    if (const auto *moving_wall =
+          dynamic_cast<const Functions::Distance::TranslatingWall<dim, number> *>(wall))
+      wall_velocity = moving_wall->get_velocity();
+
     if constexpr (dim == 3)
       {
         relative_velocity.value =
-          particle.linear_velocity() +
+          particle.linear_velocity() - wall_velocity +
           dealii::cross_product_3d(particle.get_property(ObstacleType::Properties::radius) *
                                      particle.get_angular_velocity(),
                                    normal_vector);
       }
     else if constexpr (dim == 2)
       {
-        relative_velocity.value =
-          particle.linear_velocity() + (particle.get_property(ObstacleType::Properties::radius) *
-                                        particle.get_angular_velocity()[0]) *
-                                         dealii::cross_product_2d(normal_vector);
+        relative_velocity.value = particle.linear_velocity() - wall_velocity +
+                                  (particle.get_property(ObstacleType::Properties::radius) *
+                                   particle.get_angular_velocity()[0]) *
+                                    dealii::cross_product_2d(normal_vector);
       }
     else
       {
