@@ -120,7 +120,7 @@ namespace MeltPoolDG
        * @param poisson_ratio The Poisson's ratio of the particle material.
        */
       ContactConfiguration(const DEMParticleAccessor<dim, number> &particle,
-                           const dealii::Function<dim>            *wall,
+                           const dealii::Function<dim, number>    *wall,
                            const number                            youngs_modulus,
                            const number                            poisson_ratio);
 

@@ -98,13 +98,15 @@ namespace MeltPoolDG
 
         for (auto &[key, wall_function] : wall_distance_functions)
           {
-            ContactConfiguration particle_wall_contact_configuration(
-              particle,
-              wall_function.get(),
-              contact_data.particle.youngs_modulus,
-              contact_data.particle.poisson_ratio);
-            if (particle_wall_contact_configuration.normal_overlap > 0)
+            // Checking for contact first to avoid evaluating the gradient if there is no contact.
+            const number distance = std::abs(wall_function->value(particle.get_location()));
+            if (particle.get_property(ObstacleType::Properties::radius) - distance > 0)
               {
+                ContactConfiguration particle_wall_contact_configuration(
+                  particle,
+                  wall_function.get(),
+                  contact_data.particle.youngs_modulus,
+                  contact_data.particle.poisson_ratio);
                 compute_and_add_contact_loads(particle_wall_contact_configuration,
                                               particle,
                                               tangential_gaps_with_walls[particle.id()][key]);
@@ -269,6 +271,8 @@ namespace MeltPoolDG
     effective_shear_modulus = 0.25 * youngs_modulus / ((2 - poisson_ratio) * (1 + poisson_ratio));
 
     const number distance = self.get_location().distance(other.get_location());
+    Assert(distance > 0.,
+           dealii::ExcMessage("Particles at identical positions, contact normal is undefined."));
 
     normal_vector  = (other.get_location() - self.get_location()) / distance;
     normal_overlap = (self.get_property(ObstacleType::Properties::radius) +
@@ -308,7 +312,7 @@ namespace MeltPoolDG
   template <int dim, typename number, typename ObstacleType>
   SphericalParticleContactForce<dim, number, ObstacleType>::ContactConfiguration::
     ContactConfiguration(const DEMParticleAccessor<dim, number> &particle,
-                         const dealii::Function<dim>            *wall,
+                         const dealii::Function<dim, number>    *wall,
                          const number                            youngs_modulus,
                          const number                            poisson_ratio)
   {
