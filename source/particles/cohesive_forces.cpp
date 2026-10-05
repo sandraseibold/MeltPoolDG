@@ -18,6 +18,15 @@ namespace MeltPoolDG
 
   template <int dim, typename number, typename ObstacleType>
   void
+  SphericalParticleCohesiveForce<dim, number, ObstacleType>::attach_wall(
+    std::shared_ptr<dealii::Function<dim, number>>    wall_distance_function,
+    const SphericalParticleCohesiveForceData<number> &wall_cohesive_force_data)
+  {
+    walls.push_back({std::move(wall_distance_function), wall_cohesive_force_data});
+  }
+
+  template <int dim, typename number, typename ObstacleType>
+  void
   SphericalParticleCohesiveForce<dim, number, ObstacleType>::add_load_to_obstacles(
     ObstacleField<dim, number, ObstacleType> &obstacle_field) const
   {
@@ -35,6 +44,33 @@ namespace MeltPoolDG
             CohesiveContactConfiguration contact_configuration(particle,
                                                                other,
                                                                cohesive_force_data);
+
+            if (contact_configuration.normal_distance < contact_configuration.cut_off_distance)
+              {
+                dealii::Tensor<1, dim, number> cohesive_force;
+                if (contact_configuration.normal_distance <=
+                    contact_configuration.pull_off_force_limit_distance)
+                  {
+                    cohesive_force = contact_configuration.pull_off_force_magnitude *
+                                     contact_configuration.normal_vector;
+                  }
+                else
+                  {
+                    cohesive_force = cohesive_force_data.hamaker_constant *
+                                     contact_configuration.effective_radius /
+                                     (6. * contact_configuration.normal_distance *
+                                      contact_configuration.normal_distance) *
+                                     contact_configuration.normal_vector;
+                  }
+                particle.add_force(cohesive_force);
+              }
+          }
+
+        for (const CohesiveWall &wall : walls)
+          {
+            CohesiveContactConfiguration contact_configuration(particle,
+                                                               wall.wall_distance_function.get(),
+                                                               wall.cohesive_force_data);
 
             if (contact_configuration.normal_distance < contact_configuration.cut_off_distance)
               {
@@ -85,6 +121,35 @@ namespace MeltPoolDG
 
     cut_off_distance = pull_off_force_limit_distance /
                        std::sqrt(cohesive_force_data.cut_off_relative_decline_van_der_waals);
+  }
+
+  template <int dim, typename number, typename ObstacleType>
+  SphericalParticleCohesiveForce<dim, number, ObstacleType>::CohesiveContactConfiguration::
+    CohesiveContactConfiguration(
+      const DEMParticleAccessor<dim, number>           &particle,
+      const dealii::Function<dim, number>              *wall,
+      const SphericalParticleCohesiveForceData<number> &cohesive_force_data)
+  {
+    effective_radius = particle.get_property(ObstacleType::Properties::radius);
+    normal_distance  = std::abs(wall->value(particle.get_location())) - effective_radius;
+
+    pull_off_force_magnitude =
+      4. * std::numbers::pi_v<number> * cohesive_force_data.surface_energy * effective_radius;
+
+    pull_off_force_limit_distance =
+      std::sqrt(cohesive_force_data.hamaker_constant * effective_radius /
+                (6. * std::abs(pull_off_force_magnitude)));
+
+    cut_off_distance = pull_off_force_limit_distance /
+                       std::sqrt(cohesive_force_data.cut_off_relative_decline_van_der_waals);
+
+    // Evaluating the gradient only if the particle is within the cut-off distance.
+    if (normal_distance < cut_off_distance)
+      {
+        // Normal vector points from particle to wall.
+        normal_vector =
+          -wall->gradient(particle.get_location()) / wall->gradient(particle.get_location()).norm();
+      }
   }
 } // namespace MeltPoolDG
 

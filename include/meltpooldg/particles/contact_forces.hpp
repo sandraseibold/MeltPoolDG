@@ -35,7 +35,7 @@ namespace MeltPoolDG
      * any point in space to the wall surface. The contact normal is obtained from the gradient of
      * this function.
      *
-     * @param wall_distance_function A unique pointer to a function representing the
+     * @param wall_distance_function A shared pointer to a function representing the
      * distance to the wall.
      *
      * @note The value of the wall function is the distance to the closest point on the wall, and
@@ -43,7 +43,7 @@ namespace MeltPoolDG
      * function acts on both sides of the wall.
      */
     void
-    attach_wall(std::unique_ptr<dealii::Function<dim, number>> &&wall_distance_function);
+    attach_wall(std::shared_ptr<dealii::Function<dim, number>> wall_distance_function);
 
     /**
      * Compute the contact forces and add them to the obstacles in the given obstacle field. This
@@ -87,7 +87,7 @@ namespace MeltPoolDG
 
     /// Map of wall distance functions added to the contact model. The key is a unique wall
     /// id to identify each wall.
-    std::map<int, std::unique_ptr<dealii::Function<dim, number>>> wall_distance_functions;
+    std::map<int, std::shared_ptr<dealii::Function<dim, number>>> wall_distance_functions;
 
     /**
      * Struct describing the contact configuration between two particles, i.e., it computes and

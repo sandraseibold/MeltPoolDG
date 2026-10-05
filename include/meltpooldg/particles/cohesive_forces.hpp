@@ -1,11 +1,15 @@
 #pragma once
 
+#include <deal.II/base/function.h>
 #include <deal.II/base/parameter_handler.h>
 #include <deal.II/base/tensor.h>
 
 #include <meltpooldg/particles/cohesive_forces_data.hpp>
 #include <meltpooldg/particles/obstacle_field.hpp>
 #include <meltpooldg/particles/particle_accessor.hpp>
+
+#include <memory>
+#include <vector>
 
 namespace MeltPoolDG
 {
@@ -21,6 +25,20 @@ namespace MeltPoolDG
      */
     explicit SphericalParticleCohesiveForce(
       const SphericalParticleCohesiveForceData<number> &cohesive_force_data);
+
+    /**
+     * This function adds a wall defined by a distance function to the cohesive force computation.
+     * The wall is treated as a particle with infinite radius, i.e., the effective radius of a
+     * particle–wall contact equals the particle radius. The normal vector is obtained from the
+     * gradient of the distance function.
+     *
+     * @param wall_distance_function A shared pointer to a function representing the
+     * distance to the wall.
+     * @param wall_cohesive_force_data Cohesive force data of the particle–wall pairing.
+     */
+    void
+    attach_wall(std::shared_ptr<dealii::Function<dim, number>>    wall_distance_function,
+                const SphericalParticleCohesiveForceData<number> &wall_cohesive_force_data);
 
     /**
      * Computes the total cohesive load acting on all particles in a given obstacle field. The
@@ -67,6 +85,20 @@ namespace MeltPoolDG
     /// Cohesive force data for the spherical particle cohesive force model.
     SphericalParticleCohesiveForceData<number> cohesive_force_data;
 
+    /// A wall together with the parameters of the particle–wall cohesive interaction.
+    struct CohesiveWall
+    {
+      /// Distance function representing the wall.
+      std::shared_ptr<dealii::Function<dim, number>> wall_distance_function;
+
+      /// Cohesive force data of the particle–wall pairing, i.e., the cohesive force data of the
+      /// particles with the surface energy of the respective particle–wall pairing.
+      SphericalParticleCohesiveForceData<number> cohesive_force_data;
+    };
+
+    /// Walls at which cohesive forces act on the particles.
+    std::vector<CohesiveWall> walls;
+
     /**
      * Struct describing the cohesive contact configuration between two particles, i.e., it computes
      * and caches all relevant cohesive contact parameters such as effective radius, cut-off
@@ -86,6 +118,20 @@ namespace MeltPoolDG
       CohesiveContactConfiguration(
         const DEMParticleAccessor<dim, number>           &self,
         const DEMParticleAccessor<dim, number>           &other,
+        const SphericalParticleCohesiveForceData<number> &cohesive_force_data);
+
+      /**
+       * Constructor which computes all relevant input for the particle–wall cohesive force model.
+       * The wall is assumed to have infinite radius. The normal vector points from @p particle to
+       * the wall and is only computed if the particle is within the cut-off distance.
+       *
+       * @param particle The particle for which the cohesive force is computed.
+       * @param wall Pointer to the distance function representing the wall.
+       * @param cohesive_force_data The cohesive force data of the particle–wall pairing.
+       */
+      CohesiveContactConfiguration(
+        const DEMParticleAccessor<dim, number>           &particle,
+        const dealii::Function<dim, number>              *wall,
         const SphericalParticleCohesiveForceData<number> &cohesive_force_data);
 
       /// Normal distance between the two particles (positive if not in contact), i.e., the smallest
