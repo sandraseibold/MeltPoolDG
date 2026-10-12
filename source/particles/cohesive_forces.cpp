@@ -83,7 +83,7 @@ namespace MeltPoolDG
                   }
                 else
                   {
-                    cohesive_force = cohesive_force_data.hamaker_constant *
+                    cohesive_force = wall.cohesive_force_data.hamaker_constant *
                                      contact_configuration.effective_radius /
                                      (6. * contact_configuration.normal_distance *
                                       contact_configuration.normal_distance) *
