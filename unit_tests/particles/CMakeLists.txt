@@ -8,6 +8,11 @@ mpdg_setup_mpi_unit_tests(
    dem_time_integrators.cpp
 )
 
+mpdg_setup_serial_unit_tests(
+   TEST_SOURCE_FILES
+   cohesive_wall_forces.cpp
+)
+
 mpdg_setup_mpi_unit_tests(
    N_MPI_PROCESSES
    2
